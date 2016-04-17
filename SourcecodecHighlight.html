@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>SourceCodeHighlight</title>
+	<script type="text/javascript" src="jquery-1.10.1.js"></script>
+	<link rel="stylesheet" type="text/css" href="scHighlight.css">
+	<script type="text/javascript" src="scHighlight.js"></script>
+</head>
+<body>
+	
+	<h2>开发网页源代码高亮插件</h2>
+	<p>1.基本的效果:</p>
+<pre language="java">
+//设置语言java,javascript,c,c++,html,...
+public class A(){
+	public void main(String[] args){
+		alert("I am the 'main' method of Class A.");
+	}
+}
+</pre>
+	<p>2.支持多种方式注释:</p>
+
+
+<pre language="java">
+	import java.lang.Math;
+	/**
+	 *多行注释效果
+	 */
+//多个单行注释效果
+	//设置语言java,javascript,c,c++,html,...
+
+	<!-- 这样的注释 -->  
+	public class A(){// 类A
+		public void main(String[] args){//main
+			alert("I am the 'main' method of Class A.");
+			System.out.println("This is a test");
+		}
+	}
+</pre>
+
+	<p>3.支持源代码种类多而复杂,高度可定制,效果简直不要太好！</p>
+
+<pre language="java">
+package myservlet;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import org.apache.commons.fileupload.FileItem;
+import org.apache.commons.fileupload.FileUploadException;
+import org.apache.commons.fileupload.disk.DiskFileItemFactory;
+import org.apache.commons.fileupload.servlet.ServletFileUpload;
+
+import DAO.UserInfoBeanDao;
+
+import utils.ImageUtils;
+
+public class UploadImageAndEdit extends HttpServlet {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	public void doGet(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+
+		this.doPost(request, response);
+	}
+
+	/**
+	 * The doPost method of the servlet. <br>
+	 *
+	 * This method is called when a form has its tag value method equals to post.
+	 * 
+	 * @param request the request send by the client to the server
+	 * @param response the response send by the server to the client
+	 * @throws ServletException if an error occurred
+	 * @throws IOException if an error occurred
+	 */
+	@SuppressWarnings("unchecked")
+	public void doPost(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+
+		request.setCharacterEncoding("utf-8");
+		response.setCharacterEncoding("utf-8");
+		
+		//获取用户名，为后面 创建用户文件夹
+		HttpSession usersession = request.getSession();
+		String username = (String) usersession.getAttribute("username");
+	
+		String message = "";
+		String usersPath = getServletContext().getRealPath("/users");
+		System.out.println(usersPath);
+		File usersDir = new File(usersPath);
+		if(!usersDir.exists()){
+			usersDir.mkdirs();
+		}
+		
+		
+		//根据用户名 创建属于用户根目录，保存属于用户的所有文件
+		String userPath = usersDir.getPath()+"\\"+username;
+		File userDir = new File(userPath);
+		if(!userDir.exists()){
+			userDir.mkdirs();
+		}
+		//上传时文件的保存目录
+		String destPath = userDir.getPath()+"\\files";
+		File destFile = new File(destPath);
+		if(!destFile.exists()){
+			destFile.mkdirs();
+		}
+		destFile.setReadable(true);
+		destFile.setWritable(true);
+		destFile.setExecutable(true);
+		System.out.println(destPath);
+		//上传时生成的临时文件保存目录
+		String tempPath = userDir.getPath()+"\\temp";
+		File tempFile = new File(tempPath);
+		if(!tempFile.exists()){
+			tempFile.mkdirs();
+		}
+		tempFile.setWritable(true);
+		System.out.println(tempPath);
+		
+		//1.创建DiskFileItemFactory工厂,当上传文件的大小超出缓存区大小时，会生成临时文件放在指定的目录中
+			//第一个参数setSizeThreshold(1024*1024),设置缓存区大小,默认10k;
+			//第二个参数setRepository(temp),设置上传时生成的历史文件保存目录，
+		DiskFileItemFactory factory = new DiskFileItemFactory(1024*1024, tempFile);
+		
+		//2.创建文件上传解析器
+		ServletFileUpload fileUpload = new ServletFileUpload(factory);
+		
+		//解决上传文件名中文乱码
+		fileUpload.setHeaderEncoding("utf-8");
+		//判断提交上来的数据是否是上传表单数据  	--判断form表单中的enctype的属性值是否是multipart/form-data
+		if(!ServletFileUpload.isMultipartContent(request)){
+			//按照传统的数据处理方式处理
+			return;
+		}
+		//设置上传的单个文件大小1G,和，上传文件的总共最大数
+		fileUpload.setFileSizeMax(1024*1024*1024);
+		fileUpload.setSizeMax(10*1024*1024*1024);
+		
+		
+		//3.解析上传数据
+		try {
+			List<FileItem> list = fileUpload.parseRequest(request);
+			for (FileItem item : list) {
+				//判断FileItem对象中封装的是否是普通表单元素的值
+				if(item.isFormField()){
+					
+				}else{
+					//如果其中封装的是上传文件，获取上传文件的名称
+					String fileName = item.getName();
+					if(fileName == null || fileName.trim().equals("")){
+						continue;
+					}
+					System.out.println(fileName);
+					//注意：不同的浏览器提交的文件名是不一样的，有的是全路径，所以只需截取文件名称即可
+					if(fileName.contains("\\")){
+						fileName = fileName.substring(fileName.lastIndexOf("\\")+1);
+					}
+					//得到文件的扩展名
+					String fileExtName = fileName.substring(fileName.lastIndexOf(".")+1);
+					//此处可以写一个方法判断文件的格式是否符合要求
+					
+					
+					
+					//获取FileItem 中的输入流
+					InputStream  is = item.getInputStream();
+					
+					//创建一个文件输出流，要写全路径;File.separator表示反斜杠
+					FileOutputStream fos = new FileOutputStream(destFile+File.separator+fileName);
+					
+					//创建一个缓冲区
+					byte[] byteBuffer = new byte[1024];
+					int len = 0;
+					while((len = is.read(byteBuffer)) != -1){
+						fos.write(byteBuffer, 0, len);
+					}
+					fos.flush();
+					is.close();
+					fos.close();
+					
+					//生成图标图片，大小为80x80
+					fileName = fileName.substring(0, fileName.lastIndexOf("."));
+					String srcFilePath = destPath+File.separator+fileName+"."+fileExtName;
+					//users/pheonix/files/IMG_0774 版画_1_80x80.JPG
+					String destFilePath = destPath+File.separator+fileName+"_80x80."+fileExtName;
+					String currentImagePath = "users/"+username+"/files/"+fileName+"_80x80."+fileExtName;
+					try {
+						ImageUtils.resize(srcFilePath, destFilePath, 80, 80);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+					//将生成的图标图片路径存入数据库
+					new UserInfoBeanDao().updateUserInfoImage(currentImagePath, username, "editedphoto");
+					System.out.println(srcFilePath);
+					System.out.println(currentImagePath);
+					
+				}
+			}//--for list
+			message = "文件上传成功！";
+			
+			
+			
+		} catch (FileUploadException e) {
+			message = "文件上传失败！";
+		}
+		
+		request.setAttribute("message", message);
+//		request.getRequestDispatcher("/jsp/home/UserInfo.jsp").forward(request, response);
+		response.sendRedirect("/jsp/home/UserInfo.jsp");
+		
+		
+		
+		
+		
+		
+		
+		
+	}
+	
+	
+
+}
+
+</pre>
+	
+</body>
+</html>
