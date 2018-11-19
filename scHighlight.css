@@ -80,7 +80,7 @@ p{
 }
 .sch_wrapper{					/* 最内层包裹(仅仅包裹pre区域) */
 	border: 1px solid green;
-	background-color:#000020;	/* #003030; #000010; 这几个配色方案我最喜欢了 */
+	background-color:#a5851438;	/* #383838; #000020; #003030; #000010; 这几个配色方案我最喜欢了 */
 	font-family: '宋体';
 	font-size: 16px;
 	display: inline-block;
